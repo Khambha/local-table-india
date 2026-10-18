@@ -4,7 +4,7 @@ import SearchBar from './components/SearchBar.jsx'
 import FilterBar from './components/FilterBar.jsx'
 import RestaurantCard from './components/RestaurantCard.jsx'
 
-const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
+const API = (import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:8000' : '')).replace(/\/$/, '')
 
 export default function App() {
   const [cities, setCities] = useState([])

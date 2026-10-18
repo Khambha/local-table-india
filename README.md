@@ -36,7 +36,17 @@ npm install
 npm run dev
 ```
 
-Set `VITE_API_URL` when the API is hosted somewhere other than `http://localhost:8000`.
+## Deploy the full app to one Vercel project
+
+The root `vercel.toml` configures a frontend service from `frontend/` and a FastAPI service from `backend/`, both under the same Vercel project and domain. The `/api/*` paths route to FastAPI; all other paths route to the React site. Vercel supports FastAPI as a Python service and documents this multi-service layout for a Vite frontend with a FastAPI backend.
+
+1. Push the latest `main` branch to GitHub.
+2. In Vercel, import `Khambha/local-table-india`. Set **Root Directory** to the repository root (`.`), not `frontend/`; Vercel reads `vercel.toml` there.
+3. In the Vercel project's environment variables, add `SUPABASE_URL` and a newly rotated `SUPABASE_SERVICE_ROLE_KEY` for Production (and Preview if you use previews). Never use a `VITE_` prefix for the secret.
+4. Deploy. The frontend uses same-origin `/api/...` requests in production; no `VITE_API_URL` variable is needed. During local development it defaults to `http://localhost:8000`.
+5. Verify `/api/health` and `/api/cities` on the deployed domain, then open the site's home page.
+
+Vercel may present framework/build settings; the service roots and FastAPI entry point are configured in `vercel.toml`. If prompted, keep automatic settings rather than replacing the services with a frontend-only root.
 
 ## Monthly verification
 
