@@ -31,6 +31,7 @@ import json
 import os
 import re
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, Iterable, List
 from urllib.parse import urljoin, urlparse
 
@@ -43,18 +44,9 @@ BASE_URL = "https://wibest.in"
 JSON_ENDPOINT = os.getenv("WIBEST_JSON_URL", "https://wibest.in/data/json/restaurants.json")
 MAX_PAGES = int(os.getenv("WIBEST_MAX_PAGES", "40"))
 PAGE_CONCURRENCY = int(os.getenv("WIBEST_CONCURRENCY", "8"))
-CITY_STATES = {
-    "Delhi": "Delhi", "Mumbai": "Maharashtra", "Bangalore": "Karnataka",
-    "Chennai": "Tamil Nadu", "Hyderabad": "Telangana", "Kolkata": "West Bengal",
-    "Pune": "Maharashtra", "Ahmedabad": "Gujarat", "Jaipur": "Rajasthan",
-    "Lucknow": "Uttar Pradesh", "Chandigarh": "Chandigarh", "Kochi": "Kerala",
-    "Coimbatore": "Tamil Nadu", "Indore": "Madhya Pradesh",
-    "Visakhapatnam": "Andhra Pradesh", "Bhopal": "Madhya Pradesh",
-    "Nagpur": "Maharashtra", "Mysore": "Karnataka", "Vadodara": "Gujarat",
-    "Patna": "Bihar", "Surat": "Gujarat", "Mangalore": "Karnataka",
-    "Bhubaneswar": "Odisha", "Guwahati": "Assam", "Trivandrum": "Kerala",
-    "Ranchi": "Jharkhand", "Dehradun": "Uttarakhand", "Raipur": "Chhattisgarh",
-}
+CITY_STATES_PATH = Path(__file__).with_name("city_states.json")
+with CITY_STATES_PATH.open(encoding="utf-8") as states_file:
+    CITY_STATES = {city.casefold(): state for city, state in json.load(states_file).items()}
 
 
 def _as_list(value: Any) -> List[str]:
@@ -85,7 +77,7 @@ def _normalize(item: dict) -> dict:
     if isinstance(address, str):
         address = {"streetAddress": address}
     city = item.get("city") or address.get("addressLocality") or item.get("addressLocality")
-    state = item.get("state") or address.get("addressRegion") or item.get("addressRegion") or CITY_STATES.get(city)
+    state = item.get("state") or address.get("addressRegion") or item.get("addressRegion") or CITY_STATES.get(str(city).casefold())
     name = item.get("name") or item.get("title")
     if not name or not city or not state:
         return {}
