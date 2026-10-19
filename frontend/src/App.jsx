@@ -8,6 +8,7 @@ const API = (import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://loca
 
 export default function App() {
   const [cities, setCities] = useState([])
+  const [cityLoadState, setCityLoadState] = useState('loading')
   const [city, setCity] = useState('')
   const [cuisines, setCuisines] = useState([])
   const [cuisine, setCuisine] = useState('')
@@ -20,8 +21,8 @@ export default function App() {
     const controller = new AbortController()
     fetch(`${API}/api/cities`, { signal: controller.signal })
       .then(response => { if (!response.ok) throw new Error('City request failed'); return response.json() })
-      .then(data => { const list = data.cities || []; setCities(list); if (list.length) setCity(list[0]) })
-      .catch(error => { if (error.name !== 'AbortError') setError('The guide is taking a break. Check that the API is running and Supabase is connected.') })
+      .then(data => { const list = data.cities || []; setCities(list); setCityLoadState(list.length ? 'ready' : 'empty'); if (list.length) setCity(list[0]) })
+      .catch(error => { if (error.name !== 'AbortError') { setCityLoadState('error'); setError('The guide is taking a break. Check that the API is running and Supabase is connected.') } })
     return () => controller.abort()
   }, [])
 
@@ -70,18 +71,18 @@ export default function App() {
     </header>
 
     <main id="top" className="mx-auto max-w-[1440px] px-5 pb-16 sm:px-8 lg:px-12">
-      <section className="relative isolate grid min-h-[570px] overflow-visible rounded-[2rem] bg-[#183e32] text-white md:grid-cols-[1.05fr_.95fr] lg:min-h-[610px]">
-        <div className="relative z-10 flex flex-col justify-center px-7 py-12 sm:px-12 lg:px-[4.5rem]">
+      <section className="relative isolate grid min-h-[570px] min-w-0 grid-cols-1 overflow-hidden rounded-[2rem] bg-[#183e32] text-white md:grid-cols-[minmax(0,1.05fr)_minmax(0,.95fr)] lg:min-h-[610px]">
+        <div className="relative z-10 flex min-w-0 flex-col justify-center px-7 py-12 sm:px-12 lg:px-[4.5rem]">
           <div className="mb-7 inline-flex w-fit items-center gap-2 rounded-full border border-white/20 bg-white/[.06] px-3.5 py-2 text-[11px] font-medium uppercase tracking-[.16em] text-[#ecd39e]"><Sparkles size={13}/> A guide to India's local tables</div>
           <h1 className="max-w-[650px] font-serif text-[3.4rem] leading-[.99] tracking-[-.045em] sm:text-7xl lg:text-[5.6rem]">Good food.<br/><span className="italic text-[#f0d59a]">Found nearby.</span></h1>
           <p className="mt-6 max-w-md text-sm leading-7 text-white/70 sm:text-base">A considered little guide to the places that make a city taste like itself.</p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="w-full max-w-[370px] rounded-2xl bg-[#fffdf8] p-3.5 text-[#1d2922] shadow-xl shadow-black/10"><SearchBar cities={cities} city={city} onChange={chooseCity}/></div>
-            <div className="pb-1 text-xs text-white/55">{cities.length ? <><span className="font-semibold text-[#f0d59a]">{cities.length}</span> cities in the guide</> : 'Finding cities...'}</div>
+            <div aria-live="polite" className="pb-1 text-xs text-white/65">{cities.length ? <><span className="font-semibold text-[#f0d59a]">{cities.length}</span> cities in the guide</> : cityLoadState === 'loading' ? 'Finding cities...' : cityLoadState === 'error' ? 'API unavailable — check setup' : 'No city data loaded yet'}</div>
           </div>
           <a href="#shortlist" className="mt-8 flex w-fit items-center gap-2 text-xs font-semibold uppercase tracking-[.15em] text-white/60 transition hover:text-white">Scroll to the table <ArrowDown size={14}/></a>
         </div>
-        <div className="relative min-h-[300px] overflow-hidden rounded-b-[2rem] md:rounded-bl-none md:rounded-r-[2rem]">
+        <div className="relative min-h-[300px] min-w-0 overflow-hidden rounded-b-[2rem] md:rounded-bl-none md:rounded-r-[2rem]">
           <img src="https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=1400&q=85" alt="A colorful Indian thali served at a restaurant" className="absolute inset-0 h-full w-full object-cover object-center"/>
           <div className="absolute inset-0 bg-gradient-to-t from-[#102b22]/75 via-[#102b22]/10 to-transparent md:bg-gradient-to-l md:from-transparent md:via-[#183e32]/10 md:to-[#183e32]/30"/>
           <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between gap-4 sm:bottom-9 sm:left-9 sm:right-9"><div><p className="text-[10px] font-semibold uppercase tracking-[.18em] text-white/70">A little more local</p><p className="mt-1 font-serif text-2xl italic text-white sm:text-3xl">Every city has a signature.</p></div><span className="mb-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/40 bg-white/10 text-white backdrop-blur-sm"><Compass size={19} strokeWidth={1.5}/></span></div>

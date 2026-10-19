@@ -1,27 +1,69 @@
+import { useState } from 'react'
 import { ArrowUpRight, MapPin, Star } from 'lucide-react'
 
-const foodPhotos = [
-  'photo-1585937421612-70a008356fbe',
-  'photo-1565557623262-b51c2513a641',
-  'photo-1546833999-b9f581a1996d',
-  'photo-1565299624946-b28f40a0ae38',
-  'photo-1555939594-58d7cb561ad1',
-  'photo-1547573854-74d2a71d0826',
-  'photo-1504674900247-0877df9cc836',
-  'photo-1517248135467-4c7edcad34c4',
-  'photo-1512621776951-a57141f2eefd',
-  'photo-1547592180-85f173990554',
+const cuisineVisuals = [
+  { match: /seafood|fish|crab|prawn|coastal/i, key: 'seafood', label: 'Seafood' },
+  { match: /biryani|pulao/i, key: 'biryani', label: 'Biryani' },
+  { match: /south indian|dosa|idli|chettinad|andhra|kerala|tamil|mangalorean/i, key: 'south-indian', label: 'South Indian' },
+  { match: /cafe|coffee|bakery|dessert|ice cream|sweets/i, key: 'cafe-bakery', label: 'Cafe and bakery' },
+  { match: /street food|chaat|snacks|kebab/i, key: 'street-food', label: 'Indian street food' },
+  { match: /north indian|mughlai|punjabi|gujarati|rajasthani|thali|indian/i, key: 'north-indian', label: 'Indian cuisine' },
 ]
 
+function hashText(value) {
+  let hash = 2166136261
+  for (const character of value) {
+    hash ^= character.codePointAt(0)
+    hash = Math.imul(hash, 16777619)
+  }
+  return ((hash >>> 0) % 2147483646) + 1
+}
+
+function cleanKeyword(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .slice(0, 48)
+}
+
+function getCuisineVisual(restaurant) {
+  const cuisines = Array.isArray(restaurant.cuisine) ? restaurant.cuisine : []
+  const primaryCuisine = cleanKeyword(cuisines[0] || '')
+  const metadata = `${cuisines.join(' ')} ${restaurant.name || ''}`
+  const visual = cuisineVisuals.find(item => item.match.test(metadata)) || cuisineVisuals[cuisineVisuals.length - 1]
+  const cleanedName = cleanKeyword(restaurant.name)
+  const keyword = [primaryCuisine, cleanedName, 'Indian food'].filter(Boolean).join(',')
+  const lock = hashText(`${primaryCuisine}|${cleanedName}`)
+
+  return {
+    primaryCuisine: primaryCuisine || visual.label,
+    alt: `Representative ${visual.label.toLowerCase()} food image for ${restaurant.name}`,
+    // The lock keeps the keyword-matched external image stable for this restaurant.
+    remote: `https://loremflickr.com/800/600/${encodeURIComponent(keyword)}?lock=${lock}`,
+    local: `/images/cuisines/${visual.key}.svg`,
+  }
+}
+
 export default function RestaurantCard({ restaurant, rank }) {
-  const photo = foodPhotos[(rank - 1) % foodPhotos.length]
+  const visual = getCuisineVisual(restaurant)
+  const [imageSrc, setImageSrc] = useState(visual.remote)
+  const [usingLocalImage, setUsingLocalImage] = useState(false)
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${restaurant.name}, ${restaurant.city}`)}`
   const rating = Number(restaurant.rating || 0)
   const reviews = Number(restaurant.reviews || 0)
 
+  const useCuisineFallback = () => {
+    if (!usingLocalImage) {
+      setUsingLocalImage(true)
+      setImageSrc(visual.local)
+    }
+  }
+
   return <article className="group flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-[#e1ded5] bg-[#fffefa] transition duration-300 hover:-translate-y-1 hover:border-[#c7cfc5] hover:shadow-[0_18px_45px_rgba(31,54,42,.12)]">
     <div className="relative h-44 overflow-hidden bg-[#e5e1d6]">
-      <img src={`https://images.unsplash.com/${photo}?auto=format&fit=crop&w=800&q=78`} alt="" loading="lazy" className="h-full w-full object-cover transition duration-700 group-hover:scale-105"/>
+      <img src={imageSrc} alt={visual.alt} onError={useCuisineFallback} loading="lazy" className="h-full w-full object-cover transition duration-700 group-hover:scale-105"/>
       <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10"/>
       <span className="absolute left-3.5 top-3.5 rounded-full bg-[#fffdf7]/95 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.12em] text-[#294d3c]">No. {String(rank).padStart(2, '0')}</span>
       <a href={mapsUrl} target="_blank" rel="noreferrer" aria-label={`Find ${restaurant.name} on Google Maps`} className="absolute right-3.5 top-3.5 flex h-9 w-9 items-center justify-center rounded-full bg-[#fffdf7]/95 text-[#294d3c] transition hover:bg-[#204c3b] hover:text-white"><ArrowUpRight size={16}/></a>
