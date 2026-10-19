@@ -1,5 +1,6 @@
 """Supabase client configuration and small async-friendly query helpers."""
 import os
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
@@ -38,3 +39,29 @@ def fetch_rows(*, select: str = "*", filters: Optional[Dict[str, Any]] = None,
 
 def mark_closed(restaurant_id: str) -> None:
     get_supabase().table("restaurants").update({"is_legit": False}).eq("id", restaurant_id).execute()
+
+
+def fetch_discovery_cache(city_key: str) -> Optional[Dict[str, Any]]:
+    response = (get_supabase().table("city_discovery_cache")
+                .select("results,expires_at")
+                .eq("city_key", city_key)
+                .limit(1).execute())
+    rows = response.data or []
+    if not rows:
+        return None
+    entry = rows[0]
+    expires_at = datetime.fromisoformat(str(entry["expires_at"]).replace("Z", "+00:00"))
+    if expires_at <= datetime.now(timezone.utc):
+        return None
+    return entry
+
+
+def save_discovery_cache(city_key: str, results: List[Dict[str, Any]]) -> None:
+    now = datetime.now(timezone.utc)
+    payload = {
+        "city_key": city_key,
+        "results": results,
+        "fetched_at": now.isoformat(),
+        "expires_at": (now + timedelta(days=7)).isoformat(),
+    }
+    get_supabase().table("city_discovery_cache").upsert(payload, on_conflict="city_key").execute()

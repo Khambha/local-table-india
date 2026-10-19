@@ -16,6 +16,11 @@ class Restaurant(BaseModel):
     is_legit: bool = True
     last_checked: Optional[str] = None
     score: Optional[float] = None
+    source: str = "wibest"
+    source_url: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    address: Optional[str] = None
 
 
 class CityList(BaseModel):
